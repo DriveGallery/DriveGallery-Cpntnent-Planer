@@ -20,7 +20,6 @@
    ------------------------------------------------------------------------- */
 const SUPABASE_URL = "https://ktibqwpsgkdzjolnanrm.supabase.co";       // z. B. "https://xxxxx.supabase.co"
 const SUPABASE_ANON_KEY = "sb_publishable_5gxX0pvn8zsi1mLIYhwfXQ_8W4cgcnH";  // z. B. "eyJhbGciOi..."
-
 const USE_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 // Supabase-Client wird nur erzeugt, wenn Zugangsdaten hinterlegt sind
