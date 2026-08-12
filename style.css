@@ -480,6 +480,24 @@ input::placeholder, textarea::placeholder { color: var(--text-faint); }
   .entry__side { justify-content: space-between; }
 }
 
+/* ===================== ANPASSUNG: Einheitsgröße für Aktions-Buttons ===================== */
+.entry__side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.entry__side .btn--icon {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-sizing: border-box;
+  font-size: 13px;
+}
+
 /* Reduzierte Bewegung respektieren */
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
