@@ -371,6 +371,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     confirmDialog.hidden = true;
   });
+   // --- KALENDER EXPORT ---
+function downloadCalendarEvent(entry) {
+  const dateStr = entry.date.replace(/-/g, '');
+  
+  const icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'BEGIN:VEVENT',
+    `SUMMARY:Content: ${entry.vehicle}`,
+    `DESCRIPTION:Status: ${entry.status}\\nNotiz: ${entry.note || 'Keine'}\\nLink: ${entry.link || 'Keiner'}`,
+    `DTSTART;VALUE=DATE:${dateStr}`,
+    `DTEND;VALUE=DATE:${dateStr}`,
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `${entry.vehicle.replace(/\\s+/g, '_')}_Post.ics`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 
   // Bestätigungs-Dialog schließen bei Klick auf den dunklen Hintergrund
   confirmDialog.addEventListener("click", (ev) => {
