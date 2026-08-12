@@ -3,7 +3,7 @@
    -------------------------------------------------------------------------
    ÜBERBLICK
    1) KONFIGURATION   — Supabase-Zugangsdaten & LocalStorage Keys
-   2) DATENSCHICHT     — Abstraktion für Content-Einträge & Projekte
+   2) DATENSCHICHT    — Abstraktion für Content-Einträge & Projekte (via Supabase)
    3) RENDERING        — Baut die HTML-Listen und Ansichten
    4) EVENT-HANDLING   — Navigation, Formulare, Filter, Status & Löschen
    ========================================================================= */
@@ -24,7 +24,7 @@ const LOCAL_STORAGE_KEY = "drivegallery_entries_v1";
 const LOCAL_STORAGE_PROJECTS_KEY = "drivegallery_projects_v1";
 
 /* -------------------------------------------------------------------------
-   2) DATENSCHICHT (Content & Projekte)
+   2) DATENSCHICHT (Content & Projekte über Supabase)
    ------------------------------------------------------------------------- */
 const data = {
   // --- Content Einträge ---
@@ -101,39 +101,28 @@ const data = {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(remaining));
   },
 
-  // --- Projekte & Sonstige Ereignisse (localStorage) ---
-  getProjects() {
-    const raw = localStorage.getItem(LOCAL_STORAGE_PROJECTS_KEY);
-    return raw ? JSON.parse(raw) : [];
+  // --- Projekte & Sonstige Ereignisse (über Supabase via entries-Tabelle) ---
+  async getProjects() {
+    const allEntries = await this.getAll();
+    return allEntries.filter(e => e.type === 'project' || e.title);
   },
 
-  saveProject(project, id = null) {
-    const projects = this.getProjects();
-    if (id) {
-      const index = projects.findIndex(p => p.id === id);
-      if (index !== -1) {
-        projects[index] = { ...projects[index], ...project };
-      }
-    } else {
-      projects.push({
-        ...project,
-        id: crypto.randomUUID(),
-        created_at: new Date().toISOString(),
-      });
-    }
-    localStorage.setItem(LOCAL_STORAGE_PROJECTS_KEY, JSON.stringify(projects));
+  async saveProject(project, id = null) {
+    const projectData = {
+      ...project,
+      type: 'project',
+      date: '2026-01-01', // Dummy-Datum für die Datenbank-Regel (Not Null)
+      vehicle: project.title // Mapping für die vehicle-Spalte falls nötig
+    };
+    await this.save(projectData, id);
   },
 
-  updateProjectStatus(id, newStatus) {
-    const projects = this.getProjects();
-    const updated = projects.map((p) => (p.id === id ? { ...p, status: newStatus } : p));
-    localStorage.setItem(LOCAL_STORAGE_PROJECTS_KEY, JSON.stringify(updated));
+  async updateProjectStatus(id, newStatus) {
+    await this.updateStatus(id, newStatus);
   },
 
-  removeProject(id) {
-    const projects = this.getProjects();
-    const remaining = projects.filter((p) => p.id !== id);
-    localStorage.setItem(LOCAL_STORAGE_PROJECTS_KEY, JSON.stringify(remaining));
+  async removeProject(id) {
+    await this.remove(id);
   }
 };
 
@@ -150,7 +139,7 @@ const MONTH_NAMES = [
 ];
 
 function formatDateShort(isoDate) {
-  if (!isoDate) return "";
+  if (!isoDate || isoDate === '2026-01-01') return "";
   const [y, m, d] = isoDate.split("-");
   return `${d}.${m}.`;
 }
@@ -191,7 +180,7 @@ function downloadCalendarEvent(entry) {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', `${entry.vehicle.replace(/\\s+/g, '_')}_Post.ics`);
+  link.setAttribute('download', `${entry.vehicle.replace(/\s+/g, '_')}_Post.ics`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -210,14 +199,18 @@ let currentProjectFilter = "alle";
 let currentEditProjectId = null;
 
 let pendingDeleteId = null;
-let pendingDeleteType = "entry"; // "entry" oder "project"
+let pendingDeleteType = "entry";
 
 async function loadAndRender() {
-  currentEntries = await data.getAll();
+  const allData = await data.getAll();
+  
+  // Content filtern (alles was kein Projekt ist)
+  currentEntries = allData.filter(e => e.type !== 'project' && !e.title);
   renderStats(currentEntries);
   renderList(currentEntries, currentFilter);
 
-  currentProjects = data.getProjects();
+  // Projekte filtern
+  currentProjects = allData.filter(e => e.type === 'project' || e.title);
   renderProjectList(currentProjects, currentProjectFilter);
 }
 
@@ -363,6 +356,7 @@ function renderProjectList(projects, filter) {
 }
 
 function renderProjectItem(p) {
+  const displayTitle = p.title || p.vehicle;
   const note = p.note ? `<p class="entry__note"><strong>Notiz:</strong> ${escapeHtml(p.note)}</p>` : "";
   const brainstorm = p.brainstorm ? `<p class="entry__note" style="color: var(--accent-strong);">🧠 <strong>Brainstorming:</strong> ${escapeHtml(p.brainstorm)}</p>` : "";
 
@@ -378,7 +372,7 @@ function renderProjectItem(p) {
     <article class="entry" data-project-id="${p.id}" style="grid-template-columns: 1fr auto;">
       <div class="entry__main" title="Klicken zum Öffnen/Schließen">
         <div class="entry__title-row">
-          <span class="entry__vehicle">${escapeHtml(p.title)}</span>
+          <span class="entry__vehicle">${escapeHtml(displayTitle)}</span>
           ${hasDetails ? '<span style="font-size: 11px; color: var(--text-faint); margin-left: 6px;">▼ Details</span>' : ''}
         </div>
         ${detailsHtml}
@@ -412,7 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadAndRender();
 
-  // --- ANSICHTEN WECHSELN (Tab-Navigation oben) ---
+  // --- ANSICHTEN WECHSELN ---
   const contentView = document.getElementById("contentView");
   const projectsView = document.getElementById("projectsView");
   const navContentBtn = document.getElementById("navContentBtn");
@@ -459,6 +453,7 @@ document.addEventListener("DOMContentLoaded", () => {
       vehicle: document.getElementById("fieldVehicle").value.trim(),
       link: document.getElementById("fieldLink").value.trim(),
       note: document.getElementById("fieldNote").value.trim(),
+      type: "content"
     };
 
     if (!entryData.date || !entryData.vehicle) return;
@@ -489,7 +484,7 @@ document.addEventListener("DOMContentLoaded", () => {
     currentEditProjectId = null;
   });
 
-  projectForm.addEventListener("submit", (ev) => {
+  projectForm.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const projectData = {
       title: document.getElementById("fieldProjTitle").value.trim(),
@@ -500,11 +495,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!projectData.title) return;
 
-    data.saveProject(projectData, currentEditProjectId);
+    await data.saveProject(projectData, currentEditProjectId);
     projectForm.reset();
     projectFormPanel.hidden = true;
     currentEditProjectId = null;
-    loadAndRender();
+    await loadAndRender();
   });
 
   // --- FILTER TABS (Content) ---
@@ -534,7 +529,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- LISTEN KLICKS (Content) ---
   const listEl = document.getElementById("entryList");
   listEl.addEventListener("click", async (ev) => {
-    // Aufklappen bei Klick auf den Hauptbereich
     const mainArea = ev.target.closest(".entry__main");
     if (mainArea && !ev.target.closest("a")) {
       const article = mainArea.closest(".entry");
@@ -586,8 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- LISTEN KLICKS (Projekte) ---
   const projectListEl = document.getElementById("projectList");
-  projectListEl.addEventListener("click", (ev) => {
-    // Aufklappen bei Klick auf den Hauptbereich
+  projectListEl.addEventListener("click", async (ev) => {
     const mainArea = ev.target.closest(".entry__main");
     if (mainArea) {
       const article = mainArea.closest(".entry");
@@ -600,8 +593,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const id = statusBtn.dataset.id;
       const current = statusBtn.dataset.projectStatus;
       const nextIndex = (PROJECT_STATUS_CYCLE.indexOf(current) + 1) % PROJECT_STATUS_CYCLE.length;
-      data.updateProjectStatus(id, PROJECT_STATUS_CYCLE[nextIndex]);
-      loadAndRender();
+      await data.updateProjectStatus(id, PROJECT_STATUS_CYCLE[nextIndex]);
+      await loadAndRender();
       return;
     }
 
@@ -611,7 +604,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const projectToEdit = currentProjects.find(p => p.id == id);
       if (projectToEdit) {
         currentEditProjectId = id;
-        document.getElementById("fieldProjTitle").value = projectToEdit.title || "";
+        document.getElementById("fieldProjTitle").value = projectToEdit.title || projectToEdit.vehicle || "";
         document.getElementById("fieldProjStatus").value = projectToEdit.status || "In Planung";
         document.getElementById("fieldProjNote").value = projectToEdit.note || "";
         document.getElementById("fieldProjBrainstorm").value = projectToEdit.brainstorm || "";
@@ -629,7 +622,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // --- LÖSCH-BESTÄTIGUNG (Universal) ---
+  // --- LÖSCH-BESTÄTIGUNG ---
   const confirmDialog = document.getElementById("confirmDialog");
   document.getElementById("confirmCancel").addEventListener("click", () => {
     pendingDeleteId = null;
@@ -641,7 +634,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (pendingDeleteType === "entry") {
         await data.remove(pendingDeleteId);
       } else {
-        data.removeProject(pendingDeleteId);
+        await data.removeProject(pendingDeleteId);
       }
       pendingDeleteId = null;
       await loadAndRender();
