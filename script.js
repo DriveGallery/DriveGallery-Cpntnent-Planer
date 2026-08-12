@@ -1,46 +1,33 @@
 /* =========================================================================
-    DriveGallery Content Planner — script.js
-    -------------------------------------------------------------------------
-    ÜBERBLICK
-    1) KONFIGURATION   — hier tragt ihr eure Supabase-Zugangsdaten ein
-    2) DATENSCHICHT     — abstrahiert localStorage vs. Supabase, damit der
-                          Rest des Codes nicht wissen muss, woher die Daten
-                          kommen
-    3) RENDERING        — baut die HTML-Liste aus den Daten
-    4) EVENT-HANDLING   — Formular, Filter, Status-Klick, Löschen
-    ========================================================================= */
+   DriveGallery Content Planner — script.js
+   -------------------------------------------------------------------------
+   ÜBERBLICK
+   1) KONFIGURATION   — Supabase-Zugangsdaten & LocalStorage Keys
+   2) DATENSCHICHT     — Abstraktion für Content-Einträge & Projekte
+   3) RENDERING        — Baut die HTML-Listen und Ansichten
+   4) EVENT-HANDLING   — Navigation, Formulare, Filter, Status & Löschen
+   ========================================================================= */
 
 /* -------------------------------------------------------------------------
-    1) KONFIGURATION
-    -------------------------------------------------------------------------
-    Wenn ihr Phase 2 (Cloud-Sync über Supabase) nutzen wollt:
-    - Tragt hier eure Projekt-URL und den "anon"-Key ein (siehe README.md).
-    - Lasst beide Felder leer ("" ), um ausschließlich lokal (localStorage)
-      zu arbeiten — das funktioniert sofort ohne Konto.
-    ------------------------------------------------------------------------- */
-const SUPABASE_URL = "https://ktibqwpsgkdzjolnanrm.supabase.co";       // z. B. "https://xxxxx.supabase.co"
-const SUPABASE_ANON_KEY = "sb_publishable_5gxX0pvn8zsi1mLIYhwfXQ_8W4cgcnH";  // z. B. "eyJhbGciOi..."
+   1) KONFIGURATION
+   ------------------------------------------------------------------------- */
+const SUPABASE_URL = "https://ktibqwpsgkdzjolnanrm.supabase.co"; 
+const SUPABASE_ANON_KEY = "sb_publishable_5gxX0pvn8zsi1mLIYhwfXQ_8W4cgcnH"; 
 const USE_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
-// Supabase-Client wird nur erzeugt, wenn Zugangsdaten hinterlegt sind
 let supabaseClient = null;
 if (USE_SUPABASE && window.supabase) {
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
 const LOCAL_STORAGE_KEY = "drivegallery_entries_v1";
+const LOCAL_STORAGE_PROJECTS_KEY = "drivegallery_projects_v1";
 
 /* -------------------------------------------------------------------------
-    2) DATENSCHICHT
-    -------------------------------------------------------------------------
-    Jede Funktion gibt es in zwei Varianten (local / cloud). Der Rest der App
-    ruft immer nur die "data.*"-Funktionen auf und muss den Unterschied nicht
-    kennen. So könnt ihr später jederzeit zwischen den beiden Modi wechseln,
-    ohne den restlichen Code anzufassen.
-    ------------------------------------------------------------------------- */
+   2) DATENSCHICHT (Content & Projekte)
+   ------------------------------------------------------------------------- */
 const data = {
-
-  // Alle Einträge laden, neueste zuerst nach Datum sortiert (aufsteigend)
+  // --- Content Einträge ---
   async getAll() {
     if (USE_SUPABASE && supabaseClient) {
       const { data: rows, error } = await supabaseClient
@@ -48,30 +35,27 @@ const data = {
         .select("*")
         .order("date", { ascending: true });
       if (error) {
-        console.error("Supabase-Fehler beim Laden:", error);
+        console.error("Supabase-Fehler beim Laden (Entries):", error);
         return [];
       }
       return rows;
     }
-    // --- localStorage-Fallback ---
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     const entries = raw ? JSON.parse(raw) : [];
     return entries.sort((a, b) => a.date.localeCompare(b.date));
   },
 
-  // Neuen Eintrag anlegen oder bestehenden aktualisieren
   async save(entry, id = null) {
     if (USE_SUPABASE && supabaseClient) {
       if (id) {
         const { error } = await supabaseClient.from("entries").update(entry).eq("id", id);
-        if (error) console.error("Supabase-Fehler beim Aktualisieren:", error);
+        if (error) console.error("Supabase-Fehler beim Aktualisieren (Entries):", error);
       } else {
         const { error } = await supabaseClient.from("entries").insert([entry]);
-        if (error) console.error("Supabase-Fehler beim Speichern:", error);
+        if (error) console.error("Supabase-Fehler beim Speichern (Entries):", error);
       }
       return;
     }
-    // --- localStorage-Fallback ---
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     const entries = raw ? JSON.parse(raw) : [];
     
@@ -90,43 +74,75 @@ const data = {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(entries));
   },
 
-  // Status eines Eintrags aktualisieren
   async updateStatus(id, newStatus) {
     if (USE_SUPABASE && supabaseClient) {
       const { error } = await supabaseClient
         .from("entries")
         .update({ status: newStatus })
         .eq("id", id);
-      if (error) console.error("Supabase-Fehler beim Status-Update:", error);
+      if (error) console.error("Supabase-Fehler beim Status-Update (Entries):", error);
       return;
     }
-    // --- localStorage-Fallback ---
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     const entries = raw ? JSON.parse(raw) : [];
     const updated = entries.map((e) => (e.id === id ? { ...e, status: newStatus } : e));
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
   },
 
-  // Eintrag löschen
   async remove(id) {
     if (USE_SUPABASE && supabaseClient) {
       const { error } = await supabaseClient.from("entries").delete().eq("id", id);
-      if (error) console.error("Supabase-Fehler beim Löschen:", error);
+      if (error) console.error("Supabase-Fehler beim Löschen (Entries):", error);
       return;
     }
-    // --- localStorage-Fallback ---
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     const entries = raw ? JSON.parse(raw) : [];
     const remaining = entries.filter((e) => e.id !== id);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(remaining));
   },
+
+  // --- Projekte & Sonstige Ereignisse (localStorage) ---
+  getProjects() {
+    const raw = localStorage.getItem(LOCAL_STORAGE_PROJECTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  },
+
+  saveProject(project, id = null) {
+    const projects = this.getProjects();
+    if (id) {
+      const index = projects.findIndex(p => p.id === id);
+      if (index !== -1) {
+        projects[index] = { ...projects[index], ...project };
+      }
+    } else {
+      projects.push({
+        ...project,
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+      });
+    }
+    localStorage.setItem(LOCAL_STORAGE_PROJECTS_KEY, JSON.stringify(projects));
+  },
+
+  updateProjectStatus(id, newStatus) {
+    const projects = this.getProjects();
+    const updated = projects.map((p) => (p.id === id ? { ...p, status: newStatus } : p));
+    localStorage.setItem(LOCAL_STORAGE_PROJECTS_KEY, JSON.stringify(updated));
+  },
+
+  removeProject(id) {
+    const projects = this.getProjects();
+    const remaining = projects.filter((p) => p.id !== id);
+    localStorage.setItem(LOCAL_STORAGE_PROJECTS_KEY, JSON.stringify(remaining));
+  }
 };
 
 /* -------------------------------------------------------------------------
-    Hilfsfunktionen
-    ------------------------------------------------------------------------- */
+   Hilfsfunktionen
+   ------------------------------------------------------------------------- */
 
 const STATUS_CYCLE = ["Geplant", "Material fertig", "Gepostet"];
+const PROJECT_STATUS_CYCLE = ["In Planung", "Umsetzung", "Erledigt"];
 
 const MONTH_NAMES = [
   "Januar", "Februar", "März", "April", "Mai", "Juni",
@@ -134,17 +150,17 @@ const MONTH_NAMES = [
 ];
 
 function formatDateShort(isoDate) {
-  // "2026-09-14" -> "14.09."
+  if (!isoDate) return "";
   const [y, m, d] = isoDate.split("-");
   return `${d}.${m}.`;
 }
 
 function monthKey(isoDate) {
-  // "2026-09-14" -> "2026-09"
-  return isoDate.slice(0, 7);
+  return isoDate ? isoDate.slice(0, 7) : "9999-99";
 }
 
 function monthLabel(key) {
+  if (key === "9999-99") return "Ohne Datum";
   const [y, m] = key.split("-").map(Number);
   return `${MONTH_NAMES[m - 1]} ${y}`;
 }
@@ -157,7 +173,7 @@ function escapeHtml(str) {
 
 // --- KALENDER EXPORT ---
 function downloadCalendarEvent(entry) {
-  const dateStr = entry.date.replace(/-/g, '');
+  const dateStr = entry.date ? entry.date.replace(/-/g, '') : new Date().toISOString().slice(0,10).replace(/-/g, '');
   
   const icsContent = [
     'BEGIN:VCALENDAR',
@@ -182,23 +198,29 @@ function downloadCalendarEvent(entry) {
 }
 
 /* -------------------------------------------------------------------------
-    3) RENDERING
-    ------------------------------------------------------------------------- */
+   3) RENDERING (Content & Projekte)
+   ------------------------------------------------------------------------- */
 
 let currentEntries = [];
 let currentFilter = "alle";
+let currentEditId = null;
+
+let currentProjects = [];
+let currentProjectFilter = "alle";
+let currentEditProjectId = null;
+
 let pendingDeleteId = null;
-let currentEditId = null; // Speichert die ID, wenn gerade ein Eintrag bearbeitet wird
+let pendingDeleteType = "entry"; // "entry" oder "project"
 
 async function loadAndRender() {
   currentEntries = await data.getAll();
   renderStats(currentEntries);
   renderList(currentEntries, currentFilter);
+
+  currentProjects = data.getProjects();
+  renderProjectList(currentProjects, currentProjectFilter);
 }
 
-// -------------------------------------------------------------------------
-// SUPABASE REALTIME — Änderungen von anderen Nutzern sofort anzeigen
-// -------------------------------------------------------------------------
 function setupRealtime() {
   if (!USE_SUPABASE || !supabaseClient) return;
 
@@ -206,18 +228,10 @@ function setupRealtime() {
     .channel("drivegallery-entries")
     .on(
       "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "entries",
-      },
-      () => {
-        loadAndRender();
-      }
+      { event: "*", schema: "public", table: "entries" },
+      () => { loadAndRender(); }
     )
-    .subscribe((status) => {
-      console.log("Supabase Realtime:", status);
-    });
+    .subscribe();
 }
 
 setupRealtime();
@@ -248,8 +262,7 @@ function renderList(entries, filter) {
     listEl.innerHTML = "";
     emptyEl.hidden = false;
     emptyEl.querySelector(".empty__title").textContent = "Noch nichts geplant.";
-    emptyEl.querySelector(".empty__sub").textContent =
-      "Leg deinen ersten Post an — Datum, Fahrzeug und Typ reichen zum Start.";
+    emptyEl.querySelector(".empty__sub").textContent = "Leg deinen ersten Post an — Datum, Fahrzeug und Typ reichen zum Start.";
     return;
   }
 
@@ -263,7 +276,6 @@ function renderList(entries, filter) {
 
   emptyEl.hidden = true;
 
-  // Nach Monat gruppieren
   const groups = new Map();
   filtered.forEach((e) => {
     const key = monthKey(e.date);
@@ -275,7 +287,7 @@ function renderList(entries, filter) {
 
   listEl.innerHTML = sortedKeys
     .map((key) => {
-      const items = groups.get(key).sort((a, b) => a.date.localeCompare(b.date));
+      const items = groups.get(key).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
       return `
         <section class="month-group">
           <h2 class="month-group__title">${monthLabel(key)}</h2>
@@ -290,7 +302,7 @@ function renderEntry(e) {
   const link = e.link
     ? `<a class="entry__link" href="${escapeHtml(e.link)}" target="_blank" rel="noopener noreferrer">Insta Inspiration ↗</a>`
     : "";
-  const note = e.note ? `<p class="entry__note">${escapeHtml(e.note)}</p>` : "";
+  const note = e.note ? `<p class="entry__note"><strong>Notiz:</strong> ${escapeHtml(e.note)}</p>` : "";
 
   return `
     <article class="entry" data-id="${e.id}">
@@ -307,9 +319,61 @@ function renderEntry(e) {
           ${e.status}
         </button>
         <div style="display: flex; gap: 4px; align-items: center; margin-top: 4px;">
-          <button class="btn--icon edit-btn" data-edit-id="${e.id}" title="Bearbeiten / Notiz hinzufügen">✏️</button>
-          <button class="btn--icon cal-btn" data-cal-id="${e.id}" title="Zum Kalender hinzufügen">📅</button>
-          <button class="btn--icon" data-delete-id="${e.id}" title="Eintrag löschen">✕</button>
+          <button class="btn--icon edit-btn" data-edit-id="${e.id}" title="Bearbeiten">✏️</button>
+          <button class="btn--icon cal-btn" data-cal-id="${e.id}" title="Zum Kalender">📅</button>
+          <button class="btn--icon" data-delete-id="${e.id}" title="Löschen">✕</button>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+// --- Projekte Rendern ---
+function renderProjectList(projects, filter) {
+  const listEl = document.getElementById("projectList");
+  const emptyEl = document.getElementById("projectEmptyState");
+
+  const filtered = filter === "alle" ? projects : projects.filter((p) => p.status === filter);
+
+  if (projects.length === 0) {
+    listEl.innerHTML = "";
+    emptyEl.hidden = false;
+    return;
+  }
+
+  if (filtered.length === 0) {
+    listEl.innerHTML = "";
+    emptyEl.hidden = false;
+    emptyEl.querySelector(".empty__title").textContent = "Nichts in diesem Filter.";
+    emptyEl.querySelector(".empty__sub").textContent = "Wechsle den Filter oder lege ein neues Projekt an.";
+    return;
+  }
+
+  emptyEl.hidden = true;
+
+  listEl.innerHTML = filtered.map(renderProjectItem).join("");
+}
+
+function renderProjectItem(p) {
+  const note = p.note ? `<p class="entry__note"><strong>Notiz:</strong> ${escapeHtml(p.note)}</p>` : "";
+  const brainstorm = p.brainstorm ? `<p class="entry__note" style="color: var(--accent-strong);">🧠 <strong>Brainstorming:</strong> ${escapeHtml(p.brainstorm)}</p>` : "";
+
+  return `
+    <article class="entry" data-project-id="${p.id}" style="grid-template-columns: 1fr auto;">
+      <div class="entry__main">
+        <div class="entry__title-row">
+          <span class="entry__vehicle">${escapeHtml(p.title)}</span>
+        </div>
+        ${note}
+        ${brainstorm}
+      </div>
+      <div class="entry__side">
+        <button class="status-label project-status-label" data-project-status="${p.status}" data-id="${p.id}" title="Klicken zum Wechseln">
+          ${p.status}
+        </button>
+        <div style="display: flex; gap: 4px; align-items: center; margin-top: 4px;">
+          <button class="btn--icon edit-proj-btn" data-edit-project-id="${p.id}" title="Bearbeiten">✏️</button>
+          <button class="btn--icon delete-proj-btn" data-delete-project-id="${p.id}" title="Löschen">✕</button>
         </div>
       </div>
     </article>
@@ -317,11 +381,10 @@ function renderEntry(e) {
 }
 
 /* -------------------------------------------------------------------------
-    4) EVENT-HANDLING
-    ------------------------------------------------------------------------- */
+   4) EVENT-HANDLING
+   ------------------------------------------------------------------------- */
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Sync-Status-Anzeige oben rechts
   const syncDot = document.getElementById("syncDot");
   const syncLabel = document.getElementById("syncLabel");
   if (USE_SUPABASE && supabaseClient) {
@@ -333,14 +396,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadAndRender();
 
-  // --- Formular ein-/ausblenden ---
+  // --- ANSICHTEN WECHSELN (Tab-Navigation oben) ---
+  const contentView = document.getElementById("contentView");
+  const projectsView = document.getElementById("projectsView");
+  const navContentBtn = document.getElementById("navContentBtn");
+  const navProjectsBtn = document.getElementById("navProjectsBtn");
+
+  navContentBtn.addEventListener("click", () => {
+    contentView.hidden = false;
+    projectsView.hidden = true;
+    navContentBtn.className = "btn btn--accent";
+    navProjectsBtn.className = "btn btn--ghost";
+  });
+
+  navProjectsBtn.addEventListener("click", () => {
+    contentView.hidden = true;
+    projectsView.hidden = false;
+    navProjectsBtn.className = "btn btn--accent";
+    navContentBtn.className = "btn btn--ghost";
+  });
+
+  // --- CONTENT FORMULAR ---
   const formPanel = document.getElementById("formPanel");
   const openFormBtn = document.getElementById("openFormBtn");
   const cancelFormBtn = document.getElementById("cancelFormBtn");
   const entryForm = document.getElementById("entryForm");
 
   openFormBtn.addEventListener("click", () => {
-    currentEditId = null; // Zurücksetzen für neuen Eintrag
+    currentEditId = null;
     entryForm.reset();
     formPanel.hidden = !formPanel.hidden;
     if (!formPanel.hidden) document.getElementById("fieldDate").focus();
@@ -352,7 +435,6 @@ document.addEventListener("DOMContentLoaded", () => {
     currentEditId = null;
   });
 
-  // --- Formular absenden (Neu oder Bearbeiten) ---
   entryForm.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const entryData = {
@@ -372,8 +454,45 @@ document.addEventListener("DOMContentLoaded", () => {
     await loadAndRender();
   });
 
-  // --- Filter-Tabs ---
-  const tabs = document.querySelectorAll(".tab");
+  // --- PROJEKT FORMULAR ---
+  const projectFormPanel = document.getElementById("projectFormPanel");
+  const openProjectFormBtn = document.getElementById("openProjectFormBtn");
+  const cancelProjectFormBtn = document.getElementById("cancelProjectFormBtn");
+  const projectForm = document.getElementById("projectForm");
+
+  openProjectFormBtn.addEventListener("click", () => {
+    currentEditProjectId = null;
+    projectForm.reset();
+    projectFormPanel.hidden = !projectFormPanel.hidden;
+    if (!projectFormPanel.hidden) document.getElementById("fieldProjTitle").focus();
+  });
+
+  cancelProjectFormBtn.addEventListener("click", () => {
+    projectForm.reset();
+    projectFormPanel.hidden = true;
+    currentEditProjectId = null;
+  });
+
+  projectForm.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const projectData = {
+      title: document.getElementById("fieldProjTitle").value.trim(),
+      status: document.getElementById("fieldProjStatus").value,
+      note: document.getElementById("fieldProjNote").value.trim(),
+      brainstorm: document.getElementById("fieldProjBrainstorm").value.trim(),
+    };
+
+    if (!projectData.title) return;
+
+    data.saveProject(projectData, currentEditProjectId);
+    projectForm.reset();
+    projectFormPanel.hidden = true;
+    currentEditProjectId = null;
+    loadAndRender();
+  });
+
+  // --- FILTER TABS (Content) ---
+  const tabs = document.querySelectorAll("#filterTabs .tab");
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
       tabs.forEach((t) => { t.classList.remove("is-active"); t.setAttribute("aria-selected", "false"); });
@@ -384,22 +503,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // --- Klicks innerhalb der Liste: Status, Bearbeiten, Kalender, Löschen ---
+  // --- FILTER TABS (Projekte) ---
+  const projectTabs = document.querySelectorAll("#projectFilterTabs .tab");
+  projectTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      projectTabs.forEach((t) => { t.classList.remove("is-active"); t.setAttribute("aria-selected", "false"); });
+      tab.classList.add("is-active");
+      tab.setAttribute("aria-selected", "true");
+      currentProjectFilter = tab.dataset.filter;
+      renderProjectList(currentProjects, currentProjectFilter);
+    });
+  });
+
+  // --- LISTEN KLICKS (Content) ---
   const listEl = document.getElementById("entryList");
   listEl.addEventListener("click", async (ev) => {
-    // 1. Status wechseln
     const statusBtn = ev.target.closest(".status-label");
     if (statusBtn) {
       const id = statusBtn.dataset.id;
       const current = statusBtn.dataset.status;
       const nextIndex = (STATUS_CYCLE.indexOf(current) + 1) % STATUS_CYCLE.length;
-      const next = STATUS_CYCLE[nextIndex];
-      await data.updateStatus(id, next);
+      await data.updateStatus(id, STATUS_CYCLE[nextIndex]);
       await loadAndRender();
       return;
     }
 
-    // 2. Bearbeiten (Notizen hinzufügen/ändern)
     const editBtn = ev.target.closest("[data-edit-id]");
     if (editBtn) {
       const id = editBtn.dataset.editId;
@@ -411,33 +539,65 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("fieldVehicle").value = entryToEdit.vehicle || "";
         document.getElementById("fieldLink").value = entryToEdit.link || "";
         document.getElementById("fieldNote").value = entryToEdit.note || "";
-        
         formPanel.hidden = false;
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
       return;
     }
 
-    // 3. Kalender Export
     const calBtn = ev.target.closest("[data-cal-id]");
     if (calBtn) {
-      const id = calBtn.dataset.calId;
-      const entryToExport = currentEntries.find(e => e.id == id);
-      if (entryToExport) {
-        downloadCalendarEvent(entryToExport);
-      }
+      const entryToExport = currentEntries.find(e => e.id == calBtn.dataset.calId);
+      if (entryToExport) downloadCalendarEvent(entryToExport);
       return;
     }
 
-    // 4. Löschen anstoßen
     const deleteBtn = ev.target.closest("[data-delete-id]");
     if (deleteBtn) {
       pendingDeleteId = deleteBtn.dataset.deleteId;
+      pendingDeleteType = "entry";
       document.getElementById("confirmDialog").hidden = false;
     }
   });
 
-  // --- Lösch-Bestätigung ---
+  // --- LISTEN KLICKS (Projekte) ---
+  const projectListEl = document.getElementById("projectList");
+  projectListEl.addEventListener("click", (ev) => {
+    const statusBtn = ev.target.closest(".project-status-label");
+    if (statusBtn) {
+      const id = statusBtn.dataset.id;
+      const current = statusBtn.dataset.projectStatus;
+      const nextIndex = (PROJECT_STATUS_CYCLE.indexOf(current) + 1) % PROJECT_STATUS_CYCLE.length;
+      data.updateProjectStatus(id, PROJECT_STATUS_CYCLE[nextIndex]);
+      loadAndRender();
+      return;
+    }
+
+    const editBtn = ev.target.closest("[data-edit-project-id]");
+    if (editBtn) {
+      const id = editBtn.dataset.editProjectId;
+      const projectToEdit = currentProjects.find(p => p.id == id);
+      if (projectToEdit) {
+        currentEditProjectId = id;
+        document.getElementById("fieldProjTitle").value = projectToEdit.title || "";
+        document.getElementById("fieldProjStatus").value = projectToEdit.status || "In Planung";
+        document.getElementById("fieldProjNote").value = projectToEdit.note || "";
+        document.getElementById("fieldProjBrainstorm").value = projectToEdit.brainstorm || "";
+        projectFormPanel.hidden = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
+
+    const deleteBtn = ev.target.closest("[data-delete-project-id]");
+    if (deleteBtn) {
+      pendingDeleteId = deleteBtn.dataset.deleteProjectId;
+      pendingDeleteType = "project";
+      document.getElementById("confirmDialog").hidden = false;
+    }
+  });
+
+  // --- LÖSCH-BESTÄTIGUNG (Universal) ---
   const confirmDialog = document.getElementById("confirmDialog");
   document.getElementById("confirmCancel").addEventListener("click", () => {
     pendingDeleteId = null;
@@ -446,14 +606,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("confirmDelete").addEventListener("click", async () => {
     if (pendingDeleteId) {
-      await data.remove(pendingDeleteId);
+      if (pendingDeleteType === "entry") {
+        await data.remove(pendingDeleteId);
+      } else {
+        data.removeProject(pendingDeleteId);
+      }
       pendingDeleteId = null;
       await loadAndRender();
     }
     confirmDialog.hidden = true;
   });
 
-  // Bestätigungs-Dialog schließen bei Klick auf den dunklen Hintergrund
   confirmDialog.addEventListener("click", (ev) => {
     if (ev.target === confirmDialog) {
       pendingDeleteId = null;
