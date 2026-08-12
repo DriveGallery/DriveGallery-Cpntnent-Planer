@@ -521,6 +521,12 @@ input::placeholder, textarea::placeholder { color: var(--text-faint); }
   font-size: 13px;
 }
 
+/* Auch dem ersten Projekt in der Liste eine feine Trennlinie oben geben */
+#projectList .entry:first-child {
+  border-top: 1px solid var(--border-soft);
+  padding-top: 14px;
+}
+
 /* Reduzierte Bewegung respektieren */
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
