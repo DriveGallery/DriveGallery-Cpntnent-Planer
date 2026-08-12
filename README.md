@@ -83,8 +83,8 @@ create policy "Alle dürfen löschen"
 Öffnet `script.js` und tragt ganz oben eure Werte ein:
 
 ```js
-const SUPABASE_URL = "https://ktibqwpsgkdzjolnanrm.supabase.co";
-const SUPABASE_ANON_KEY = "[sb_publishable_5gxX0pvn8zsi1mLIYhwfXQ_8W4cgcnH";]
+const SUPABASE_URL = "";
+const SUPABASE_ANON_KEY = "";
 ```
 
 Speichern, Seite neu laden (bzw. neu hochladen, falls schon gehostet) — fertig. Oben rechts in der App seht ihr jetzt „Cloud-Sync aktiv" statt „Nur lokal gespeichert".
