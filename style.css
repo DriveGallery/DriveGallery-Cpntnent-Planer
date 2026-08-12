@@ -97,12 +97,14 @@ button {
 }
 
 /* Logo-Datei liegt unter assets/logo.png — Hintergrund ist bereits transparent */
+/* Logo-Datei anpassen, damit es nicht verzerrt wird */
 .brand__logo {
   height: 34px;
-  width: auto;
+  width: auto;          /* Hält das korrekte Seitenverhältnis bei */
+  max-width: 160px;     /* Verhindert, dass es zu breit wird */
+  object-fit: contain;  /* Schneidet nichts ab und verzerrt nicht */
   display: block;
 }
-
 .brand__sub {
   margin: 0;
   font-size: 12.5px;
