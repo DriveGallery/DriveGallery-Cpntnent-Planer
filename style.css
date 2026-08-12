@@ -96,15 +96,14 @@ button {
   gap: 14px;
 }
 
-/* Logo-Datei liegt unter assets/logo.png — Hintergrund ist bereits transparent */
-/* Logo-Datei anpassen, damit es nicht verzerrt wird */
 .brand__logo {
   height: 34px;
-  width: auto;          /* Hält das korrekte Seitenverhältnis bei */
-  max-width: 160px;     /* Verhindert, dass es zu breit wird */
-  object-fit: contain;  /* Schneidet nichts ab und verzerrt nicht */
+  width: auto;          
+  max-width: 160px;     
+  object-fit: contain;  
   display: block;
 }
+
 .brand__sub {
   margin: 0;
   font-size: 12.5px;
@@ -339,7 +338,10 @@ input::placeholder, textarea::placeholder { color: var(--text-faint); }
   padding-top: 2px;
 }
 
-.entry__main { min-width: 0; }
+.entry__main { 
+  min-width: 0; 
+  cursor: pointer;
+}
 
 .entry__title-row {
   display: flex;
@@ -357,6 +359,18 @@ input::placeholder, textarea::placeholder { color: var(--text-faint); }
   font-size: 11.5px;
   color: var(--text-faint);
   font-family: var(--font-mono);
+}
+
+/* Einklappbare Details (Notizen, Links, Brainstorming) */
+.entry__details {
+  display: none;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+.entry.is-expanded .entry__details {
+  display: block;
 }
 
 .entry__note {
@@ -382,7 +396,7 @@ input::placeholder, textarea::placeholder { color: var(--text-faint); }
   gap: 8px;
 }
 
-/* Status-Label — klickbar, wechselt Geplant → Entwurf → Gepostet */
+/* Status-Label — klickbar */
 .status-label {
   font-size: 11px;
   font-weight: 500;
@@ -394,9 +408,12 @@ input::placeholder, textarea::placeholder { color: var(--text-faint); }
   white-space: nowrap;
 }
 
-.status-label[data-status="Geplant"]        { background: var(--accent-soft); color: var(--accent-strong); }
-.status-label[data-status="Material fertig"] { background: var(--amber-soft); color: var(--amber); }
-.status-label[data-status="Gepostet"]       { background: var(--slate-soft); color: var(--slate); }
+.status-label[data-status="Geplant"],
+.status-label[data-project-status="In Planung"]        { background: var(--accent-soft); color: var(--accent-strong); }
+.status-label[data-status="Material fertig"],
+.status-label[data-project-status="Umsetzung"] { background: var(--amber-soft); color: var(--amber); }
+.status-label[data-status="Gepostet"],
+.status-label[data-project-status="Erledigt"]        { background: var(--slate-soft); color: var(--slate); }
 
 .status-label:hover { border-color: currentColor; }
 
@@ -435,8 +452,6 @@ input::placeholder, textarea::placeholder { color: var(--text-faint); }
   z-index: 50;
 }
 
-/* Wichtig: [hidden] muss die display:flex-Regel oben überschreiben,
-   sonst legt sich das Lösch-Fenster sofort beim Laden über die Seite. */
 .confirm[hidden] {
   display: none;
 }
@@ -461,6 +476,12 @@ input::placeholder, textarea::placeholder { color: var(--text-faint); }
   gap: 10px;
 }
 
+/* ===================== ANSICHTEN UMSCHALTEN ===================== */
+#contentView[hidden],
+#projectsView[hidden] {
+  display: none !important;
+}
+
 /* ===================== RESPONSIVE (iPhone etc.) ===================== */
 
 @media (max-width: 640px) {
@@ -482,7 +503,7 @@ input::placeholder, textarea::placeholder { color: var(--text-faint); }
   .entry__side { justify-content: space-between; }
 }
 
-/* ===================== ANPASSUNG: Einheitsgröße für Aktions-Buttons ===================== */
+/* ===================== EINHEITSGRÖSSE FÜR AKTIONSS-BUTTONS ===================== */
 .entry__side {
   display: flex;
   align-items: center;
