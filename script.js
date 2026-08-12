@@ -304,15 +304,23 @@ function renderEntry(e) {
     : "";
   const note = e.note ? `<p class="entry__note"><strong>Notiz:</strong> ${escapeHtml(e.note)}</p>` : "";
 
+  const hasDetails = e.note || e.link;
+  const detailsHtml = hasDetails ? `
+    <div class="entry__details">
+      ${note}
+      ${link}
+    </div>
+  ` : "";
+
   return `
     <article class="entry" data-id="${e.id}">
       <div class="entry__date">${formatDateShort(e.date)}</div>
-      <div class="entry__main">
+      <div class="entry__main" title="Klicken zum Öffnen/Schließen">
         <div class="entry__title-row">
           <span class="entry__vehicle">${escapeHtml(e.vehicle)}</span>
+          ${hasDetails ? '<span style="font-size: 11px; color: var(--text-faint); margin-left: 6px;">▼ Details</span>' : ''}
         </div>
-        ${note}
-        ${link}
+        ${detailsHtml}
       </div>
       <div class="entry__side">
         <button class="status-label" data-status="${e.status}" data-id="${e.id}" title="Klicken zum Wechseln">
@@ -358,14 +366,22 @@ function renderProjectItem(p) {
   const note = p.note ? `<p class="entry__note"><strong>Notiz:</strong> ${escapeHtml(p.note)}</p>` : "";
   const brainstorm = p.brainstorm ? `<p class="entry__note" style="color: var(--accent-strong);">🧠 <strong>Brainstorming:</strong> ${escapeHtml(p.brainstorm)}</p>` : "";
 
+  const hasDetails = p.note || p.brainstorm;
+  const detailsHtml = hasDetails ? `
+    <div class="entry__details">
+      ${note}
+      ${brainstorm}
+    </div>
+  ` : "";
+
   return `
     <article class="entry" data-project-id="${p.id}" style="grid-template-columns: 1fr auto;">
-      <div class="entry__main">
+      <div class="entry__main" title="Klicken zum Öffnen/Schließen">
         <div class="entry__title-row">
           <span class="entry__vehicle">${escapeHtml(p.title)}</span>
+          ${hasDetails ? '<span style="font-size: 11px; color: var(--text-faint); margin-left: 6px;">▼ Details</span>' : ''}
         </div>
-        ${note}
-        ${brainstorm}
+        ${detailsHtml}
       </div>
       <div class="entry__side">
         <button class="status-label project-status-label" data-project-status="${p.status}" data-id="${p.id}" title="Klicken zum Wechseln">
@@ -518,6 +534,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- LISTEN KLICKS (Content) ---
   const listEl = document.getElementById("entryList");
   listEl.addEventListener("click", async (ev) => {
+    // Aufklappen bei Klick auf den Hauptbereich
+    const mainArea = ev.target.closest(".entry__main");
+    if (mainArea && !ev.target.closest("a")) {
+      const article = mainArea.closest(".entry");
+      article.classList.toggle("is-expanded");
+      return;
+    }
+
     const statusBtn = ev.target.closest(".status-label");
     if (statusBtn) {
       const id = statusBtn.dataset.id;
@@ -563,6 +587,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- LISTEN KLICKS (Projekte) ---
   const projectListEl = document.getElementById("projectList");
   projectListEl.addEventListener("click", (ev) => {
+    // Aufklappen bei Klick auf den Hauptbereich
+    const mainArea = ev.target.closest(".entry__main");
+    if (mainArea) {
+      const article = mainArea.closest(".entry");
+      article.classList.toggle("is-expanded");
+      return;
+    }
+
     const statusBtn = ev.target.closest(".project-status-label");
     if (statusBtn) {
       const id = statusBtn.dataset.id;
