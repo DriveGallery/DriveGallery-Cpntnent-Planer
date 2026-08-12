@@ -157,6 +157,31 @@ async function loadAndRender() {
   renderStats(currentEntries);
   renderList(currentEntries, currentFilter);
 }
+// -------------------------------------------------------------------------
+// SUPABASE REALTIME — Änderungen von anderen Nutzern sofort anzeigen
+// -------------------------------------------------------------------------
+function setupRealtime() {
+  if (!USE_SUPABASE || !supabaseClient) return;
+
+  supabaseClient
+    .channel("drivegallery-entries")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "entries",
+      },
+      () => {
+        loadAndRender();
+      }
+    )
+    .subscribe((status) => {
+      console.log("Supabase Realtime:", status);
+    });
+}
+
+setupRealtime();
 
 function renderStats(entries) {
   const counts = { Geplant: 0, "Material fertig": 0, Gepostet: 0 };
