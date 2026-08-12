@@ -1,23 +1,23 @@
 /* =========================================================================
-   DriveGallery Content Planner — script.js
-   -------------------------------------------------------------------------
-   ÜBERBLICK
-   1) KONFIGURATION   — hier tragt ihr eure Supabase-Zugangsdaten ein
-   2) DATENSCHICHT     — abstrahiert localStorage vs. Supabase, damit der
+    DriveGallery Content Planner — script.js
+    -------------------------------------------------------------------------
+    ÜBERBLICK
+    1) KONFIGURATION   — hier tragt ihr eure Supabase-Zugangsdaten ein
+    2) DATENSCHICHT     — abstrahiert localStorage vs. Supabase, damit der
                           Rest des Codes nicht wissen muss, woher die Daten
                           kommen
-   3) RENDERING         — baut die HTML-Liste aus den Daten
-   4) EVENT-HANDLING    — Formular, Filter, Status-Klick, Löschen
-   ========================================================================= */
+    3) RENDERING        — baut die HTML-Liste aus den Daten
+    4) EVENT-HANDLING   — Formular, Filter, Status-Klick, Löschen
+    ========================================================================= */
 
 /* -------------------------------------------------------------------------
-   1) KONFIGURATION
-   -------------------------------------------------------------------------
-   Wenn ihr Phase 2 (Cloud-Sync über Supabase) nutzen wollt:
-   - Tragt hier eure Projekt-URL und den "anon"-Key ein (siehe README.md).
-   - Lasst beide Felder leer ("" ), um ausschließlich lokal (localStorage)
-     zu arbeiten — das funktioniert sofort ohne Konto.
-   ------------------------------------------------------------------------- */
+    1) KONFIGURATION
+    -------------------------------------------------------------------------
+    Wenn ihr Phase 2 (Cloud-Sync über Supabase) nutzen wollt:
+    - Tragt hier eure Projekt-URL und den "anon"-Key ein (siehe README.md).
+    - Lasst beide Felder leer ("" ), um ausschließlich lokal (localStorage)
+      zu arbeiten — das funktioniert sofort ohne Konto.
+    ------------------------------------------------------------------------- */
 const SUPABASE_URL = "https://ktibqwpsgkdzjolnanrm.supabase.co";       // z. B. "https://xxxxx.supabase.co"
 const SUPABASE_ANON_KEY = "sb_publishable_5gxX0pvn8zsi1mLIYhwfXQ_8W4cgcnH";  // z. B. "eyJhbGciOi..."
 const USE_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
@@ -31,13 +31,13 @@ if (USE_SUPABASE && window.supabase) {
 const LOCAL_STORAGE_KEY = "drivegallery_entries_v1";
 
 /* -------------------------------------------------------------------------
-   2) DATENSCHICHT
-   -------------------------------------------------------------------------
-   Jede Funktion gibt es in zwei Varianten (local / cloud). Der Rest der App
-   ruft immer nur die "data.*"-Funktionen auf und muss den Unterschied nicht
-   kennen. So könnt ihr später jederzeit zwischen den beiden Modi wechseln,
-   ohne den restlichen Code anzufassen.
-   ------------------------------------------------------------------------- */
+    2) DATENSCHICHT
+    -------------------------------------------------------------------------
+    Jede Funktion gibt es in zwei Varianten (local / cloud). Der Rest der App
+    ruft immer nur die "data.*"-Funktionen auf und muss den Unterschied nicht
+    kennen. So könnt ihr später jederzeit zwischen den beiden Modi wechseln,
+    ohne den restlichen Code anzufassen.
+    ------------------------------------------------------------------------- */
 const data = {
 
   // Alle Einträge laden, neueste zuerst nach Datum sortiert (aufsteigend)
@@ -59,21 +59,34 @@ const data = {
     return entries.sort((a, b) => a.date.localeCompare(b.date));
   },
 
-  // Neuen Eintrag anlegen
-  async add(entry) {
+  // Neuen Eintrag anlegen oder bestehenden aktualisieren
+  async save(entry, id = null) {
     if (USE_SUPABASE && supabaseClient) {
-      const { error } = await supabaseClient.from("entries").insert([entry]);
-      if (error) console.error("Supabase-Fehler beim Speichern:", error);
+      if (id) {
+        const { error } = await supabaseClient.from("entries").update(entry).eq("id", id);
+        if (error) console.error("Supabase-Fehler beim Aktualisieren:", error);
+      } else {
+        const { error } = await supabaseClient.from("entries").insert([entry]);
+        if (error) console.error("Supabase-Fehler beim Speichern:", error);
+      }
       return;
     }
     // --- localStorage-Fallback ---
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     const entries = raw ? JSON.parse(raw) : [];
-    entries.push({
-      ...entry,
-      id: crypto.randomUUID(),
-      created_at: new Date().toISOString(),
-    });
+    
+    if (id) {
+      const index = entries.findIndex(e => e.id === id);
+      if (index !== -1) {
+        entries[index] = { ...entries[index], ...entry };
+      }
+    } else {
+      entries.push({
+        ...entry,
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+      });
+    }
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(entries));
   },
 
@@ -110,8 +123,8 @@ const data = {
 };
 
 /* -------------------------------------------------------------------------
-   Hilfsfunktionen
-   ------------------------------------------------------------------------- */
+    Hilfsfunktionen
+    ------------------------------------------------------------------------- */
 
 const STATUS_CYCLE = ["Geplant", "Material fertig", "Gepostet"];
 
@@ -142,19 +155,47 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// --- KALENDER EXPORT ---
+function downloadCalendarEvent(entry) {
+  const dateStr = entry.date.replace(/-/g, '');
+  
+  const icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'BEGIN:VEVENT',
+    `SUMMARY:Content: ${entry.vehicle}`,
+    `DESCRIPTION:Status: ${entry.status}\\nNotiz: ${entry.note || 'Keine'}\\nLink: ${entry.link || 'Keiner'}`,
+    `DTSTART;VALUE=DATE:${dateStr}`,
+    `DTEND;VALUE=DATE:${dateStr}`,
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `${entry.vehicle.replace(/\\s+/g, '_')}_Post.ics`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 /* -------------------------------------------------------------------------
-   3) RENDERING
-   ------------------------------------------------------------------------- */
+    3) RENDERING
+    ------------------------------------------------------------------------- */
 
 let currentEntries = [];
 let currentFilter = "alle";
 let pendingDeleteId = null;
+let currentEditId = null; // Speichert die ID, wenn gerade ein Eintrag bearbeitet wird
 
 async function loadAndRender() {
   currentEntries = await data.getAll();
   renderStats(currentEntries);
   renderList(currentEntries, currentFilter);
 }
+
 // -------------------------------------------------------------------------
 // SUPABASE REALTIME — Änderungen von anderen Nutzern sofort anzeigen
 // -------------------------------------------------------------------------
@@ -265,15 +306,19 @@ function renderEntry(e) {
         <button class="status-label" data-status="${e.status}" data-id="${e.id}" title="Klicken zum Wechseln">
           ${e.status}
         </button>
-        <button class="btn--icon" data-delete-id="${e.id}" title="Eintrag löschen">✕</button>
+        <div style="display: flex; gap: 4px; align-items: center; margin-top: 4px;">
+          <button class="btn--icon edit-btn" data-edit-id="${e.id}" title="Bearbeiten / Notiz hinzufügen">✏️</button>
+          <button class="btn--icon cal-btn" data-cal-id="${e.id}" title="Zum Kalender hinzufügen">📅</button>
+          <button class="btn--icon" data-delete-id="${e.id}" title="Eintrag löschen">✕</button>
+        </div>
       </div>
     </article>
   `;
 }
 
 /* -------------------------------------------------------------------------
-   4) EVENT-HANDLING
-   ------------------------------------------------------------------------- */
+    4) EVENT-HANDLING
+    ------------------------------------------------------------------------- */
 
 document.addEventListener("DOMContentLoaded", () => {
   // Sync-Status-Anzeige oben rechts
@@ -295,6 +340,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const entryForm = document.getElementById("entryForm");
 
   openFormBtn.addEventListener("click", () => {
+    currentEditId = null; // Zurücksetzen für neuen Eintrag
+    entryForm.reset();
     formPanel.hidden = !formPanel.hidden;
     if (!formPanel.hidden) document.getElementById("fieldDate").focus();
   });
@@ -302,12 +349,13 @@ document.addEventListener("DOMContentLoaded", () => {
   cancelFormBtn.addEventListener("click", () => {
     entryForm.reset();
     formPanel.hidden = true;
+    currentEditId = null;
   });
 
-  // --- Formular absenden ---
+  // --- Formular absenden (Neu oder Bearbeiten) ---
   entryForm.addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    const newEntry = {
+    const entryData = {
       date: document.getElementById("fieldDate").value,
       status: document.getElementById("fieldStatus").value,
       vehicle: document.getElementById("fieldVehicle").value.trim(),
@@ -315,11 +363,12 @@ document.addEventListener("DOMContentLoaded", () => {
       note: document.getElementById("fieldNote").value.trim(),
     };
 
-    if (!newEntry.date || !newEntry.vehicle) return; // required-Felder, HTML validiert bereits
+    if (!entryData.date || !entryData.vehicle) return;
 
-    await data.add(newEntry);
+    await data.save(entryData, currentEditId);
     entryForm.reset();
     formPanel.hidden = true;
+    currentEditId = null;
     await loadAndRender();
   });
 
@@ -335,9 +384,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // --- Klicks innerhalb der Liste: Status wechseln oder löschen anstoßen ---
+  // --- Klicks innerhalb der Liste: Status, Bearbeiten, Kalender, Löschen ---
   const listEl = document.getElementById("entryList");
   listEl.addEventListener("click", async (ev) => {
+    // 1. Status wechseln
     const statusBtn = ev.target.closest(".status-label");
     if (statusBtn) {
       const id = statusBtn.dataset.id;
@@ -349,6 +399,37 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // 2. Bearbeiten (Notizen hinzufügen/ändern)
+    const editBtn = ev.target.closest("[data-edit-id]");
+    if (editBtn) {
+      const id = editBtn.dataset.editId;
+      const entryToEdit = currentEntries.find(e => e.id == id);
+      if (entryToEdit) {
+        currentEditId = id;
+        document.getElementById("fieldDate").value = entryToEdit.date || "";
+        document.getElementById("fieldStatus").value = entryToEdit.status || "Geplant";
+        document.getElementById("fieldVehicle").value = entryToEdit.vehicle || "";
+        document.getElementById("fieldLink").value = entryToEdit.link || "";
+        document.getElementById("fieldNote").value = entryToEdit.note || "";
+        
+        formPanel.hidden = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
+
+    // 3. Kalender Export
+    const calBtn = ev.target.closest("[data-cal-id]");
+    if (calBtn) {
+      const id = calBtn.dataset.calId;
+      const entryToExport = currentEntries.find(e => e.id == id);
+      if (entryToExport) {
+        downloadCalendarEvent(entryToExport);
+      }
+      return;
+    }
+
+    // 4. Löschen anstoßen
     const deleteBtn = ev.target.closest("[data-delete-id]");
     if (deleteBtn) {
       pendingDeleteId = deleteBtn.dataset.deleteId;
@@ -371,31 +452,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     confirmDialog.hidden = true;
   });
-   // --- KALENDER EXPORT ---
-function downloadCalendarEvent(entry) {
-  const dateStr = entry.date.replace(/-/g, '');
-  
-  const icsContent = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'BEGIN:VEVENT',
-    `SUMMARY:Content: ${entry.vehicle}`,
-    `DESCRIPTION:Status: ${entry.status}\\nNotiz: ${entry.note || 'Keine'}\\nLink: ${entry.link || 'Keiner'}`,
-    `DTSTART;VALUE=DATE:${dateStr}`,
-    `DTEND;VALUE=DATE:${dateStr}`,
-    'END:VEVENT',
-    'END:VCALENDAR'
-  ].join('\r\n');
-
-  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', `${entry.vehicle.replace(/\\s+/g, '_')}_Post.ics`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
 
   // Bestätigungs-Dialog schließen bei Klick auf den dunklen Hintergrund
   confirmDialog.addEventListener("click", (ev) => {
