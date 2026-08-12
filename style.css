@@ -1,0 +1,486 @@
+/* =========================================================================
+   DriveGallery Content Planner — Styles
+   -------------------------------------------------------------------------
+   Design-Tokens (hier anpassen, wenn ihr Farben/Look ändern wollt):
+   - Basis: nahezu Schwarz, kein reines #000
+   - Akzent: gedecktes Racing-Grün (statt Neon/Rot) — für Buttons & "Geplant"
+   - Flach: keine Farbverläufe, keine Schlagschatten, nur dünne 1px-Linien
+   ========================================================================= */
+
+:root {
+  /* --- Farben ------------------------------------------------------ */
+  --bg:            #0c0c0d;   /* Seiten-Hintergrund, nahes Schwarz */
+  --surface:       #131315;   /* Kacheln, Formular, Listen-Zeilen */
+  --surface-2:     #18181b;   /* leicht abgehobene Fläche (Hover) */
+  --border:        #232326;   /* dünne 1px-Trennlinien */
+  --border-soft:   #1b1b1e;
+
+  --text:          #ededec;   /* Haupttext */
+  --text-muted:    #8c8c90;   /* Sekundärtext */
+  --text-faint:    #5c5c60;   /* Platzhalter, sehr leise Labels */
+
+  --accent:        #2f6b4f;   /* gedecktes Racing-Grün — Haupt-Akzent */
+  --accent-strong: #3d8564;   /* Hover-Zustand des Akzents */
+  --accent-soft:   rgba(47, 107, 79, 0.16); /* dezenter Hintergrund für "Geplant"-Label */
+
+  --amber:         #a8813f;   /* "Entwurf" — gedecktes Bernstein/Gold */
+  --amber-soft:    rgba(168, 129, 63, 0.16);
+
+  --slate:         #6b7078;   /* "Gepostet" — neutral, erledigt */
+  --slate-soft:    rgba(107, 112, 120, 0.16);
+
+  --danger:        #9a3b3b;   /* nur für Löschen-Bestätigung */
+  --danger-strong: #b34747;
+
+  /* --- Typografie ---------------------------------------------------- */
+  --font-display: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-body:    "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* --- Sonstiges ------------------------------------------------------ */
+  --radius: 3px;              /* bewusst fast kantig — kein "soft UI" */
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-strong);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 28px 20px 80px;
+}
+
+a { color: inherit; }
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+/* Sichtbarer Fokus-Ring statt Schlagschatten — wichtig für Zugänglichkeit */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius);
+}
+
+/* ===================== HEADER ===================== */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Logo-Datei liegt unter assets/logo.png — Hintergrund ist bereits transparent */
+.brand__logo {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+
+.brand__sub {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  padding-left: 14px;
+  border-left: 1px solid var(--border);
+}
+
+.header__status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+.dot.is-cloud { background: var(--accent-strong); }
+
+/* ===================== STAT-KACHELN ===================== */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.stat {
+  background: var(--surface);
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat__value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.stat__value--mono {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent-strong);
+}
+
+.stat__label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ===================== TOOLBAR ===================== */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2px;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  padding: 7px 12px;
+  border-radius: 2px;
+  font-family: var(--font-body);
+  font-weight: 500;
+}
+
+.tab.is-active {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.tab:hover:not(.is-active) { color: var(--text); }
+
+/* ===================== BUTTONS ===================== */
+
+.btn {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 16px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.btn--accent {
+  background: var(--accent);
+  color: #f2f4f2;
+  border-color: var(--accent);
+}
+.btn--accent:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+.btn--ghost:hover { color: var(--text); border-color: var(--text-faint); }
+
+.btn--danger {
+  background: var(--danger);
+  color: #f2ecec;
+  border-color: var(--danger);
+}
+.btn--danger:hover { background: var(--danger-strong); border-color: var(--danger-strong); }
+
+.btn--icon {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  padding: 5px 9px;
+  font-size: 12px;
+  border-radius: var(--radius);
+}
+.btn--icon:hover { color: var(--danger-strong); border-color: var(--danger); }
+
+/* ===================== FORMULAR ===================== */
+
+.form-panel {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 18px;
+  margin-bottom: 28px;
+  border-radius: var(--radius);
+}
+
+.form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field--wide { grid-column: 1 / -1; }
+
+.field__label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+input, select, textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 9px 10px;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+}
+
+input[type="date"] { font-family: var(--font-mono); }
+
+textarea { resize: vertical; font-family: var(--font-body); }
+
+input::placeholder, textarea::placeholder { color: var(--text-faint); }
+
+.form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* ===================== LISTE ===================== */
+
+.list { display: flex; flex-direction: column; gap: 26px; }
+
+.month-group__title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: 92px 1fr auto;
+  gap: 16px;
+  align-items: start;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.entry:last-child { border-bottom: none; }
+
+.entry__date {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  padding-top: 2px;
+}
+
+.entry__main { min-width: 0; }
+
+.entry__title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.entry__vehicle {
+  font-weight: 600;
+  font-size: 14.5px;
+}
+
+.entry__type {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+
+.entry__note {
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.entry__link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--accent-strong);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.entry__link:hover { border-bottom-color: var(--accent-strong); }
+
+.entry__side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Status-Label — klickbar, wechselt Geplant → Entwurf → Gepostet */
+.status-label {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  font-family: var(--font-body);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.status-label[data-status="Geplant"]        { background: var(--accent-soft); color: var(--accent-strong); }
+.status-label[data-status="Material fertig"] { background: var(--amber-soft); color: var(--amber); }
+.status-label[data-status="Gepostet"]       { background: var(--slate-soft); color: var(--slate); }
+
+.status-label:hover { border-color: currentColor; }
+
+/* ===================== LEERER ZUSTAND ===================== */
+
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+.empty__title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.empty__sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ===================== LÖSCH-BESTÄTIGUNG ===================== */
+
+.confirm {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+/* Wichtig: [hidden] muss die display:flex-Regel oben überschreiben,
+   sonst legt sich das Lösch-Fenster sofort beim Laden über die Seite. */
+.confirm[hidden] {
+  display: none;
+}
+
+.confirm__box {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  max-width: 320px;
+  width: 100%;
+}
+
+.confirm__text {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+}
+
+.confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ===================== RESPONSIVE (iPhone etc.) ===================== */
+
+@media (max-width: 640px) {
+  .wrap { padding: 20px 14px 70px; }
+
+  .stats { grid-template-columns: repeat(2, 1fr); }
+
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .tabs { justify-content: space-between; }
+  .toolbar .btn--accent { width: 100%; }
+
+  .form__grid { grid-template-columns: 1fr; }
+
+  .entry {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .entry__date { padding-top: 0; }
+  .entry__side { justify-content: space-between; }
+}
+
+/* Reduzierte Bewegung respektieren */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
