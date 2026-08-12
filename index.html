@@ -9,14 +9,13 @@
 <link rel="icon" type="image/png" href="assets/DGLOGO.png" />
 <link rel="apple-touch-icon" href="assets/DGLOGO.png" />
 
-<!-- WICHTIG: Hier muss die CSS-Datei wieder rein! -->
+<!-- CSS-Datei -->
 <link rel="stylesheet" href="style.css" />
 
 <!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-
 </head>
 <body>
 
@@ -34,97 +33,179 @@
       </div>
     </header>
 
-    <!-- ===================== STAT-KACHELN ===================== -->
-    <section class="stats" id="stats" aria-label="Statistik">
-      <div class="stat">
-        <span class="stat__value" id="statGeplant">0</span>
-        <span class="stat__label">Geplant</span>
-      </div>
-      <div class="stat">
-        <span class="stat__value" id="statEntwurf">0</span>
-        <span class="stat__label">Material fertig</span>
-      </div>
-      <div class="stat">
-        <span class="stat__value" id="statGepostet">0</span>
-        <span class="stat__label">Gepostet</span>
-      </div>
-      <div class="stat stat--next">
-        <span class="stat__value stat__value--mono" id="statNext">—</span>
-        <span class="stat__label">Nächster Post</span>
-      </div>
-    </section>
+    <!-- ===================== SEITEN-NAVIGATION (Tabs oben) ===================== -->
+    <nav class="main-nav" style="display: flex; gap: 10px; margin-bottom: 24px;">
+      <button class="btn btn--accent" id="navContentBtn">🎬 Content Planner</button>
+      <button class="btn btn--ghost" id="navProjectsBtn">🚀 Planung & Projekte</button>
+    </nav>
 
-    <!-- ===================== TOOLBAR: FILTER + ADD ===================== -->
-    <section class="toolbar">
-      <div class="tabs" id="filterTabs" role="tablist" aria-label="Filter nach Status">
-        <button class="tab is-active" data-filter="alle" role="tab" aria-selected="true">Alle</button>
-        <button class="tab" data-filter="Geplant" role="tab" aria-selected="false">Geplant</button>
-        <button class="tab" data-filter="Material fertig" role="tab" aria-selected="false">Material fertig</button>
-        <button class="tab" data-filter="Gepostet" role="tab" aria-selected="false">Gepostet</button>
-      </div>
-      <button class="btn btn--accent" id="openFormBtn">+ Neuer Eintrag</button>
-    </section>
 
-    <!-- ===================== FORMULAR (versteckt bis geöffnet) ===================== -->
-    <section class="form-panel" id="formPanel" hidden>
-      <form id="entryForm" class="form" novalidate>
-        <div class="form__grid">
+    <!-- ================================================================= -->
+    <!-- ANSICHT 1: CONTENT PLANNER (Standard)                              -->
+    <!-- ================================================================= -->
+    <div id="contentView">
 
-          <label class="field">
-            <span class="field__label">Datum</span>
-            <input type="date" name="date" id="fieldDate" required />
-          </label>
-
-          <label class="field">
-            <span class="field__label">Status</span>
-            <select name="status" id="fieldStatus" required>
-              <option value="Geplant">Geplant</option>
-              <option value="Material fertig">Material fertig</option>
-              <option value="Gepostet">Gepostet</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span class="field__label">Auto</span>
-            <input type="text" name="vehicle" id="fieldVehicle" placeholder="z. B. Porsche 996 Carrera" required />
-          </label>
-
-          <label class="field">
-            <span class="field__label">Insta Link Inspiration</span>
-            <input type="url" name="link" id="fieldLink" placeholder="https://instagram.com/..." />
-          </label>
-
-          <label class="field field--wide">
-            <span class="field__label">Sonstige Notizen (optional)</span>
-            <textarea name="note" id="fieldNote" rows="2" placeholder="Kurze interne Notiz…"></textarea>
-          </label>
-
+      <!-- STAT-KACHELN -->
+      <section class="stats" id="stats" aria-label="Statistik">
+        <div class="stat">
+          <span class="stat__value" id="statGeplant">0</span>
+          <span class="stat__label">Geplant</span>
         </div>
-
-        <div class="form__actions">
-          <button type="button" class="btn btn--ghost" id="cancelFormBtn">Abbrechen</button>
-          <button type="submit" class="btn btn--accent">Eintrag speichern</button>
+        <div class="stat">
+          <span class="stat__value" id="statEntwurf">0</span>
+          <span class="stat__label">Material fertig</span>
         </div>
-      </form>
-    </section>
+        <div class="stat">
+          <span class="stat__value" id="statGepostet">0</span>
+          <span class="stat__label">Gepostet</span>
+        </div>
+        <div class="stat stat--next">
+          <span class="stat__value stat__value--mono" id="statNext">—</span>
+          <span class="stat__label">Nächster Post</span>
+        </div>
+      </section>
 
-    <!-- ===================== LISTE ===================== -->
-    <main class="list" id="entryList" aria-label="Geplante Beiträge">
-      <!-- wird per JavaScript befüllt -->
-    </main>
+      <!-- TOOLBAR: FILTER + ADD -->
+      <section class="toolbar">
+        <div class="tabs" id="filterTabs" role="tablist" aria-label="Filter nach Status">
+          <button class="tab is-active" data-filter="alle" role="tab" aria-selected="true">Alle</button>
+          <button class="tab" data-filter="Geplant" role="tab" aria-selected="false">Geplant</button>
+          <button class="tab" data-filter="Material fertig" role="tab" aria-selected="false">Material fertig</button>
+          <button class="tab" data-filter="Gepostet" role="tab" aria-selected="false">Gepostet</button>
+        </div>
+        <button class="btn btn--accent" id="openFormBtn">+ Neuer Eintrag</button>
+      </section>
 
-    <!-- Leerer Zustand -->
-    <div class="empty" id="emptyState" hidden>
-      <p class="empty__title">Noch nichts geplant.</p>
-      <p class="empty__sub">Leg deinen ersten Post an — Datum und Auto reichen zum Start.</p>
-    </div>
+      <!-- FORMULAR (versteckt bis geöffnet) -->
+      <section class="form-panel" id="formPanel" hidden>
+        <form id="entryForm" class="form" novalidate>
+          <div class="form__grid">
 
-  </div>
+            <label class="field">
+              <span class="field__label">Datum</span>
+              <input type="date" name="date" id="fieldDate" required />
+            </label>
+
+            <label class="field">
+              <span class="field__label">Status</span>
+              <select name="status" id="fieldStatus" required>
+                <option value="Geplant">Geplant</option>
+                <option value="Material fertig">Material fertig</option>
+                <option value="Gepostet">Gepostet</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span class="field__label">Auto</span>
+              <input type="text" name="vehicle" id="fieldVehicle" placeholder="z. B. Porsche 996 Carrera" required />
+            </label>
+
+            <label class="field">
+              <span class="field__label">Insta Link Inspiration</span>
+              <input type="url" name="link" id="fieldLink" placeholder="https://instagram.com/..." />
+            </label>
+
+            <label class="field field--wide">
+              <span class="field__label">Sonstige Notizen (optional)</span>
+              <textarea name="note" id="fieldNote" rows="2" placeholder="Kurze interne Notiz…"></textarea>
+            </label>
+
+          </div>
+
+          <div class="form__actions">
+            <button type="button" class="btn btn--ghost" id="cancelFormBtn">Abbrechen</button>
+            <button type="submit" class="btn btn--accent">Eintrag speichern</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- LISTE -->
+      <main class="list" id="entryList" aria-label="Geplante Beiträge">
+        <!-- wird per JavaScript befüllt -->
+      </main>
+
+      <!-- Leerer Zustand -->
+      <div class="empty" id="emptyState" hidden>
+        <p class="empty__title">Noch nichts geplant.</p>
+        <p class="empty__sub">Leg deinen ersten Post an — Datum und Auto reichen zum Start.</p>
+      </div>
+
+    </div><!-- Ende ContentView -->
+
+
+    <!-- ================================================================= -->
+    <!-- ANSICHT 2: PLANUNG & PROJEKTE (Sonstige Ereignisse)                -->
+    <!-- ================================================================= -->
+    <div id="projectsView" hidden>
+
+      <!-- TOOLBAR PROJEKTE -->
+      <section class="toolbar">
+        <div class="tabs" id="projectFilterTabs" role="tablist" aria-label="Filter nach Projekt-Status">
+          <button class="tab is-active" data-filter="alle" role="tab" aria-selected="true">Alle</button>
+          <button class="tab" data-filter="In Planung" role="tab" aria-selected="false">In Planung</button>
+          <button class="tab" data-filter="Umsetzung" role="tab" aria-selected="false">Umsetzung</button>
+          <button class="tab" data-filter="Erledigt" role="tab" aria-selected="false">Erledigt</button>
+        </div>
+        <button class="btn btn--accent" id="openProjectFormBtn">+ Neues Projekt</button>
+      </section>
+
+      <!-- FORMULAR PROJEKTE -->
+      <section class="form-panel" id="projectFormPanel" hidden>
+        <form id="projectForm" class="form" novalidate>
+          <div class="form__grid">
+
+            <label class="field">
+              <span class="field__label">Art / Titel</span>
+              <input type="text" name="title" id="fieldProjTitle" placeholder="z. B. Anpassung Webseite" required />
+            </label>
+
+            <label class="field">
+              <span class="field__label">Status</span>
+              <select name="status" id="fieldProjStatus" required>
+                <option value="In Planung">In Planung</option>
+                <option value="Umsetzung">Umsetzung</option>
+                <option value="Erledigt">Erledigt</option>
+              </select>
+            </label>
+
+            <label class="field field--wide">
+              <span class="field__label">Notiz</span>
+              <textarea name="note" id="fieldProjNote" rows="2" placeholder="Bilder auf Webseite erneuern…"></textarea>
+            </label>
+
+            <label class="field field--wide">
+              <span class="field__label">🧠 Brainstorming / Ideen</span>
+              <textarea name="brainstorm" id="fieldProjBrainstorm" rows="2" placeholder="Zusätzliche Gedanken, Schritte, Links…"></textarea>
+            </label>
+
+          </div>
+
+          <div class="form__actions">
+            <button type="button" class="btn btn--ghost" id="cancelProjectFormBtn">Abbrechen</button>
+            <button type="submit" class="btn btn--accent">Projekt speichern</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- PROJEKT-LISTE -->
+      <main class="list" id="projectList" aria-label="Geplante Projekte">
+        <!-- wird per JavaScript befüllt -->
+      </main>
+
+      <!-- Leerer Zustand Projekte -->
+      <div class="empty" id="projectEmptyState" hidden>
+        <p class="empty__title">Noch keine Projekte eingetragen.</p>
+        <p class="empty__sub">Leg deine erste Planung an — Art und Status reichen zum Start.</p>
+      </div>
+
+    </div><!-- Ende ProjectsView -->
+
+  </div><!-- Ende Wrap -->
 
   <!-- Kleine, unauffällige Lösch-Bestätigung -->
   <div class="confirm" id="confirmDialog" hidden>
     <div class="confirm__box">
-      <p class="confirm__text">Diesen Eintrag wirklich löschen?</p>
+      <p class="confirm__text" id="confirmText">Diesen Eintrag wirklich löschen?</p>
       <div class="confirm__actions">
         <button class="btn btn--ghost" id="confirmCancel">Abbrechen</button>
         <button class="btn btn--danger" id="confirmDelete">Löschen</button>
@@ -132,7 +213,7 @@
     </div>
   </div>
 
-  <!-- Supabase-Client (optional — wird nur aktiv, wenn in script.js Zugangsdaten hinterlegt sind) -->
+  <!-- Supabase-Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="script.js" defer></script>
 </body>
